@@ -7,19 +7,43 @@ import pandas as pd
 
 
 class Vocab(dict):
+    def __init__(self, path: str, **kwargs):
+        self.path = path
+        super().__init__(**kwargs)
+
+    def save(self):
+        with open(self.path, "w") as f:
+            json.dump(self, f, indent=4)
+
     @staticmethod
     def from_json(path: str) -> "Vocab":
         with open(path) as f:
-            return Vocab(**json.load(f))
+            return Vocab(path, **json.load(f))
+
 
 class CategoryClassifier:
-    def __init__(self, vocab: Vocab):
+    def __init__(self, vocab: Vocab, retrain: bool = False):
         self.vocab = vocab
+        self.retrain = retrain
 
     def classify(self, description: str) -> str:
         for keyword, category in self.vocab.items():
             if keyword in description.lower():
                 return category
+
+        if self.retrain:
+            print(f"Unknown category for '{description}', enter a category? [y/N] ", end="")
+            
+            if input() != "y":
+                return "unknown"
+            
+            keyword = input("Keyword: ")
+            category = input(f"Category: ")
+            
+            self.vocab[keyword] = category
+            self.vocab.save()
+            
+            return category
 
         return "unknown"
 
@@ -47,29 +71,34 @@ class Processor:
         self.validate(df)
 
         self.out = df
-    
+
     @abc.abstractmethod
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError
 
     def add_uuid(self, df: pd.DataFrame) -> pd.DataFrame:
         df["UUID"] = df.apply(
-            lambda x: sha256((str(x["Date"]) + str(x["Amount"]) + str(x["Description"])).encode("UTF-8")).hexdigest()[:7], axis=1
+            lambda x: sha256(
+                (str(x["Date"]) + str(x["Amount"]) + str(x["Description"])).encode(
+                    "UTF-8"
+                )
+            ).hexdigest()[:7],
+            axis=1,
         )
 
         return df
-    
+
     def add_category(self, df: pd.DataFrame) -> pd.DataFrame:
         if "Category" not in df.columns:
             df["Category"] = df["Description"].apply(self.category_classifier.classify)
 
         return df
-    
+
     def add_budget(self, df: pd.DataFrame) -> pd.DataFrame:
         df["Budget"] = "utilities"
 
         return df
-    
+
     def add_month(self, df: pd.DataFrame) -> pd.DataFrame:
         df["Month"] = df["Date"].apply(lambda x: x.strftime("%B %Y"))
 
@@ -81,8 +110,10 @@ class Processor:
         return df
 
     def order_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        return df[["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month"]]
-    
+        return df[
+            ["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month"]
+        ]
+
     def preflight_check(self, df: pd.DataFrame) -> None:
         if df.empty:
             raise ValueError("No rows found")
@@ -102,7 +133,6 @@ class Processor:
 
     def unwrap(self) -> pd.DataFrame:
         return self.out
-
 
 
 class RevolutProcessor(Processor):
@@ -126,7 +156,9 @@ class RevolutProcessor(Processor):
 
         df = df[df["Amount"] != 0]
 
-        df["Started Date"] = pd.to_datetime(df["Started Date"], format="%Y-%m-%d %H:%M:%S")
+        df["Started Date"] = pd.to_datetime(
+            df["Started Date"], format="%Y-%m-%d %H:%M:%S"
+        )
 
         # process columns
 
@@ -191,11 +223,20 @@ class IntesaProcessor(Processor):
 class VividProcessor(Processor):
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         df = self.inp.copy()
-        
+
         df["Date"] = pd.to_datetime(df["Value Date"], format="%d.%m.%Y")
         df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
 
-        df = df.drop(columns=["Booking Date", "Value Date", "Type", "Currency", "FX-rate", "Included Markup"])
+        df = df.drop(
+            columns=[
+                "Booking Date",
+                "Value Date",
+                "Type",
+                "Currency",
+                "FX-rate",
+                "Included Markup",
+            ]
+        )
 
         return df
 
@@ -211,7 +252,7 @@ def get_processor_cls(processor: str):
 
     if processor_cls is None:
         raise ValueError(f"Invalid processor type '${processor}'")
-    
+
     return processor_cls
 
 
@@ -219,8 +260,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input")
     parser.add_argument("output")
-    parser.add_argument("--processor", choices=["revolut", "intesa", "vivid"], required=True)
+    parser.add_argument(
+        "--processor", choices=["revolut", "intesa", "vivid"], required=True
+    )
     parser.add_argument("--vocab-path", default=str("vocab.json"))
+    parser.add_argument("--retrain", default=False, action="store_true")
 
     args = parser.parse_args()
 
@@ -228,8 +272,12 @@ if __name__ == "__main__":
     output_file = args.output
     processor = args.processor
     vocab_path = args.vocab_path
+    retrain = args.retrain
 
-    category_classifier = CategoryClassifier(Vocab.from_json(vocab_path))
+    category_classifier = CategoryClassifier(
+        Vocab.from_json(vocab_path), retrain=retrain
+    )
+
     df = pd.read_csv(input_file)
 
     processor_cls = get_processor_cls(processor)
