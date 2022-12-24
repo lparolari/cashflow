@@ -1,58 +1,18 @@
 import abc
-import argparse
-import json
 from hashlib import sha256
 
 import pandas as pd
 
-
-class Vocab(dict):
-    def __init__(self, path: str, **kwargs):
-        self.path = path
-        super().__init__(**kwargs)
-
-    def save(self):
-        with open(self.path, "w") as f:
-            json.dump(self, f, indent=4)
-
-    @staticmethod
-    def from_json(path: str) -> "Vocab":
-        with open(path) as f:
-            return Vocab(path, **json.load(f))
-
-
-class CategoryClassifier:
-    def __init__(self, vocab: Vocab, retrain: bool = False):
-        self.vocab = vocab
-        self.retrain = retrain
-
-    def classify(self, description: str) -> str:
-        for keyword, category in self.vocab.items():
-            if keyword in description.lower():
-                return category
-
-        if self.retrain:
-            print(f"Unknown category for '{description}', enter a category? [y/N] ", end="")
-            
-            if input() != "y":
-                return "unknown"
-            
-            keyword = input("Keyword: ")
-            category = input(f"Category: ")
-            
-            self.vocab[keyword] = category
-            self.vocab.save()
-            
-            return category
-
-        return "unknown"
+from cashflow.category import CategoryClassifier
+from cashflow.budget import BudgetClassifier
 
 
 class Processor:
-    def __init__(self, df: pd.DataFrame, category_classifier: CategoryClassifier):
+    def __init__(self, df: pd.DataFrame, category_classifier: CategoryClassifier, budget_classifier: BudgetClassifier):
         self.inp = df
         self.out = None
         self.category_classifier = category_classifier
+        self.budget_classifier = budget_classifier
 
     def process(self):
         df = self.inp.copy()
@@ -95,7 +55,7 @@ class Processor:
         return df
 
     def add_budget(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["Budget"] = "utilities"
+        df["Budget"] = df["Description"].apply(self.budget_classifier.classify)
 
         return df
 
@@ -254,36 +214,3 @@ def get_processor_cls(processor: str):
         raise ValueError(f"Invalid processor type '${processor}'")
 
     return processor_cls
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input")
-    parser.add_argument("output")
-    parser.add_argument(
-        "--processor", choices=["revolut", "intesa", "vivid"], required=True
-    )
-    parser.add_argument("--vocab-path", default=str("vocab.json"))
-    parser.add_argument("--retrain", default=False, action="store_true")
-
-    args = parser.parse_args()
-
-    input_file = args.input
-    output_file = args.output
-    processor = args.processor
-    vocab_path = args.vocab_path
-    retrain = args.retrain
-
-    category_classifier = CategoryClassifier(
-        Vocab.from_json(vocab_path), retrain=retrain
-    )
-
-    df = pd.read_csv(input_file)
-
-    processor_cls = get_processor_cls(processor)
-    processor = processor_cls(df, category_classifier)
-
-    processor.process()
-
-    df_processed = processor.unwrap()
-    df_processed.to_csv(output_file, index=False)
