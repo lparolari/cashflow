@@ -1,6 +1,6 @@
+import abc
 import argparse
 import json
-import uuid
 from hashlib import sha256
 
 import pandas as pd
@@ -12,7 +12,7 @@ class Vocab(dict):
         with open(path) as f:
             return Vocab(**json.load(f))
 
-class Classifier:
+class CategoryClassifier:
     def __init__(self, vocab: Vocab):
         self.vocab = vocab
 
@@ -25,16 +25,88 @@ class Classifier:
 
 
 class Processor:
-    def __init__(self, df: pd.DataFrame, classifier: Classifier):
-        self.df = df
-        self.classifier = classifier
+    def __init__(self, df: pd.DataFrame, category_classifier: CategoryClassifier):
+        self.inp = df
+        self.out = None
+        self.category_classifier = category_classifier
 
-    def process(self) -> pd.DataFrame:
+    def process(self):
+        df = self.inp.copy()
+
+        df = self.convert(df)
+
+        self.preflight_check(df)
+
+        df = self.add_uuid(df)
+        df = self.add_category(df)
+        df = self.add_budget(df)
+        df = self.add_month(df)
+        df = self.format_date(df)
+        df = self.order_columns(df)
+
+        self.validate(df)
+
+        self.out = df
+    
+    @abc.abstractmethod
+    def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError
+
+    def add_uuid(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["UUID"] = df.apply(
+            lambda x: sha256((str(x["Date"]) + str(x["Amount"]) + str(x["Description"])).encode("UTF-8")).hexdigest()[:7], axis=1
+        )
+
+        return df
+    
+    def add_category(self, df: pd.DataFrame) -> pd.DataFrame:
+        if "Category" not in df.columns:
+            df["Category"] = df["Description"].apply(self.category_classifier.classify)
+
+        return df
+    
+    def add_budget(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["Budget"] = "utilities"
+
+        return df
+    
+    def add_month(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["Month"] = df["Date"].apply(lambda x: x.strftime("%B %Y"))
+
+        return df
+
+    def format_date(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["Date"] = df["Date"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        return df
+
+    def order_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        return df[["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month"]]
+    
+    def preflight_check(self, df: pd.DataFrame) -> None:
+        if df.empty:
+            raise ValueError("No rows found")
+
+        if "Description" not in df.columns:
+            raise ValueError("Missing 'Category' column")
+        if "Date" not in df.columns:
+            raise ValueError("Missing 'Date' column")
+        if "Amount" not in df.columns:
+            raise ValueError("Missing 'Amount' column")
+
+        if not isinstance(df["Date"].iloc[0], pd.Timestamp):
+            raise ValueError("Column 'Date' should be a datetime")
+
+    def validate(self, df: pd.DataFrame) -> None:
+        pass
+
+    def unwrap(self) -> pd.DataFrame:
+        return self.out
+
 
 
 class RevolutProcessor(Processor):
-    def process(self) -> pd.DataFrame:
+    def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         # Example
 
@@ -45,7 +117,6 @@ class RevolutProcessor(Processor):
         TOPUP      Current      2022-05-24 6:20:07       2022-05-24 6:20:07       Payment from Parolari Luca    250     0     EUR       COMPLETED  250
         ```
         """
-        df = self.df.copy()
 
         # process values
 
@@ -55,7 +126,7 @@ class RevolutProcessor(Processor):
 
         df = df[df["Amount"] != 0]
 
-        df["Category"] = "unknown"
+        df["Started Date"] = pd.to_datetime(df["Started Date"], format="%Y-%m-%d %H:%M:%S")
 
         # process columns
 
@@ -73,17 +144,11 @@ class RevolutProcessor(Processor):
 
         df = df.rename(columns={"Started Date": "Date"})
 
-        df["UUID"] = compute_uuid(df)
-
-        df = df[["UUID", "Description", "Date", "Amount", "Category"]]
-
         return df
 
 
 class IntesaProcessor(Processor):
-    def process(self) -> pd.DataFrame:
-        df = self.df.copy()
-
+    def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         # fix csv errors
 
         df["Categoria"] = df["Categoria "]  # fix typo
@@ -109,6 +174,8 @@ class IntesaProcessor(Processor):
             columns=["Dettagli", "Conto o carta", "Contabilizzazione", "Valuta"]
         )
 
+        df["Data"] = pd.to_datetime(df["Data"], format="%m/%d/%Y")
+
         df = df.rename(
             columns={
                 "Data": "Date",
@@ -118,33 +185,19 @@ class IntesaProcessor(Processor):
             }
         )
 
-        df["UUID"] = compute_uuid(df)
-
-        df = df[["UUID", "Description", "Date", "Amount", "Category"]]
-
         return df
 
 
 class VividProcessor(Processor):
-    def process(self) -> pd.DataFrame:
-        df = self.df.copy()
-
-        df["Category"] = df["Description"].apply(self.classifier.classify)
+    def convert(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = self.inp.copy()
         
         df["Date"] = pd.to_datetime(df["Value Date"], format="%d.%m.%Y")
         df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
 
         df = df.drop(columns=["Booking Date", "Value Date", "Type", "Currency", "FX-rate", "Included Markup"])
 
-        df["UUID"] = compute_uuid(df)
-        df = df[["UUID", "Description", "Date", "Amount", "Category"]]
         return df
-
-
-def compute_uuid(df):
-    return df.apply(
-        lambda x: sha256((str(x["Date"]) + str(x["Amount"]) + str(x["Description"])).encode("UTF-8")).hexdigest()[:7], axis=1
-    )
 
 
 def get_processor_cls(processor: str):
@@ -176,11 +229,13 @@ if __name__ == "__main__":
     processor = args.processor
     vocab_path = args.vocab_path
 
-    classifier = Classifier(Vocab.from_json(vocab_path))
+    category_classifier = CategoryClassifier(Vocab.from_json(vocab_path))
     df = pd.read_csv(input_file)
 
     processor_cls = get_processor_cls(processor)
-    processor = processor_cls(df, classifier)
+    processor = processor_cls(df, category_classifier)
 
-    df_processed = processor.process()
+    processor.process()
+
+    df_processed = processor.unwrap()
     df_processed.to_csv(output_file, index=False)
