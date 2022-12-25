@@ -55,7 +55,9 @@ class Processor:
         return df
 
     def add_budget(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["Budget"] = df["Description"].apply(self.budget_classifier.classify)
+        # apply the budget classifier to all row
+        # the budget classifier function will take as input all row column as parameters
+        df["Budget"] = df.apply(lambda series: self.budget_classifier.classify(series.to_dict()), axis=1)
 
         return df
 
@@ -92,6 +94,8 @@ class Processor:
         pass
 
     def unwrap(self) -> pd.DataFrame:
+        if self.out is None:
+            raise ValueError("Data not processed yet. Did you forget to call 'process'?")
         return self.out
 
 
@@ -185,7 +189,6 @@ class VividProcessor(Processor):
         df = self.inp.copy()
 
         df["Date"] = pd.to_datetime(df["Value Date"], format="%d.%m.%Y")
-        df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
 
         df = df.drop(
             columns=[

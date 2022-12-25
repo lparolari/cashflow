@@ -14,7 +14,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--processor", choices=["revolut", "intesa", "vivid"], required=True
     )
-    parser.add_argument("--vocab-path", default=str("assets/vocab.json"))
+    parser.add_argument(
+        "--category-vocab-path", default=str("assets/category_vocab.json")
+    )
+    parser.add_argument("--budget-vocab-path", default=str("assets/budget_vocab.json"))
     parser.add_argument("--retrain", default=False, action="store_true")
 
     args = parser.parse_args()
@@ -22,14 +25,17 @@ if __name__ == "__main__":
     input_file = args.input
     output_file = args.output
     processor = args.processor
-    vocab_path = args.vocab_path
+    category_vocab_path = args.category_vocab_path
+    budget_vocab_path = args.budget_vocab_path
     retrain = args.retrain
 
     category_classifier = CategoryClassifier(
-        Vocab.from_json(vocab_path), retrain=retrain
+        Vocab.from_json(category_vocab_path), retrain=retrain
     )
 
-    budget_classifier = BudgetClassifier()
+    budget_classifier = BudgetClassifier(
+        Vocab.from_json(budget_vocab_path), retrain=retrain
+    )
 
     df = pd.read_csv(input_file)
 

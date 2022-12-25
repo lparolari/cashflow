@@ -5,6 +5,7 @@ class CategoryClassifier:
     def __init__(self, vocab: Vocab, retrain: bool = False):
         self.vocab = vocab
         self.retrain = retrain
+        self.unknown = "unknown"
 
     def classify(self, description: str) -> str:
         for keyword, category in self.vocab.items():
@@ -18,7 +19,7 @@ class CategoryClassifier:
             )
 
             if input() != "y":
-                return "unknown"
+                return self.unknown
 
             keyword = input("Keyword: ")
             category = input(f"Category: ")
@@ -28,4 +29,4 @@ class CategoryClassifier:
 
             return category
 
-        return "unknown"
+        return self.unknown
