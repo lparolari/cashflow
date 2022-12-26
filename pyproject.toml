@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "cashflow-manager"
+version = "0.1.0"
+description = "Import transaction in Notion cashflow and budget manager"
+authors = ["lparolari <luca.parolari23@gmail.com>"]
+license = "MIT"
+packages = [
+    { include = "cashflow" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pandas = "^1.5.2"
+
+[tool.poetry.dev-dependencies]
+black = "^22.12.0"
+
+[tool.poetry.scripts]
+cashflow_processor = 'cashflow.cli:main'
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

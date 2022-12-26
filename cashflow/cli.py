@@ -7,7 +7,8 @@ from cashflow.category import CategoryClassifier
 from cashflow.processor import get_processor_cls
 from cashflow.vocab import Vocab
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input")
     parser.add_argument("output")
@@ -48,3 +49,7 @@ if __name__ == "__main__":
 
     df_processed = processor.unwrap()
     df_processed.to_csv(output_file, index=False)
+
+
+if __name__ == "__main__":
+    main()
