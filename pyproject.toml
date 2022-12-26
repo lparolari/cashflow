@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cashflow-manager"
-version = ""
+version = "0.1.1"
 description = "Import transaction in Notion cashflow and budget manager"
 authors = ["lparolari <luca.parolari23@gmail.com>"]
 license = "MIT"
