@@ -233,8 +233,8 @@ function main() {
     printf "Uploading to notion... "
     for input_file in ${input_files}; do
         output_file=$(make_processed_filepath $input_file)
-        inp=$data_dir/$input_file
-        out=$data_dir/$output_file
+        inp=$input_file
+        out=$output_file
 
         if ! command -v csv2notion &> /dev/null 2>&1
         then
@@ -243,7 +243,7 @@ function main() {
             exit 1
         fi
 
-        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_url}" --merge --add-missing-relations ${out})
+        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_url}" --merge --add-missing-relations ${out} 2>&1)
 
         if [ $? -ne 0 ]; then
             printf "FAILED\n"
