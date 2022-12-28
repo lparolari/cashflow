@@ -62,7 +62,7 @@ class Processor:
         return df
 
     def add_month(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["Month"] = df["Date"].apply(lambda x: x.strftime("%B %Y"))
+        df["Month"] = df["Date"].apply(lambda x: x.strftime("%B %Y").lower())
 
         return df
 
