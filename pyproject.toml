@@ -17,6 +17,7 @@ black = "^22.12.0"
 
 [tool.poetry.scripts]
 cashflow_processor = 'cashflow.cli:main'
+budget_processor = 'budget.cli:main'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

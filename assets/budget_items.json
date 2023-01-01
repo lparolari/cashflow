@@ -1,0 +1,54 @@
+[
+  {
+    "icon": "❓",
+    "title": "unknown"
+  },
+  {
+    "icon": "💸",
+    "title": "inflow"
+  },
+  {
+    "icon": "🚗",
+    "title": "car"
+  },
+  {
+    "icon": "📈",
+    "title": "investing"
+  },
+  {
+    "icon": "☂",
+    "title": "personal care"
+  },
+  {
+    "icon": "🏡",
+    "title": "home"
+  },
+  {
+    "icon": "🏓",
+    "title": "leisure & entertainment"
+  },
+  {
+    "icon": "🛍",
+    "title": "groceries"
+  },
+  {
+    "icon": "🍕",
+    "title": "eating out"
+  },
+  {
+    "icon": "🚌",
+    "title": "transit"
+  },
+  {
+    "icon": "🎁",
+    "title": "gifting"
+  },
+  {
+    "icon": "✏",
+    "title": "education"
+  },
+  {
+    "icon": "💧",
+    "title": "utilities"
+  }
+]
