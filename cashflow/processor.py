@@ -25,6 +25,7 @@ class Processor:
         df = self.add_category(df)
         df = self.add_budget(df)
         df = self.add_month(df)
+        df = self.add_cashflow(df)
         df = self.format_date(df)
         df = self.order_columns(df)
 
@@ -66,6 +67,11 @@ class Processor:
 
         return df
 
+    def add_cashflow(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["Cashflow"] = df["Month"] + " | " + df["Budget"]
+
+        return df
+
     def format_date(self, df: pd.DataFrame) -> pd.DataFrame:
         df["Date"] = df["Date"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -73,7 +79,7 @@ class Processor:
 
     def order_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         return df[
-            ["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month"]
+            ["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month", "Cashflow"]
         ]
 
     def preflight_check(self, df: pd.DataFrame) -> None:
