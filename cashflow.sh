@@ -7,15 +7,33 @@ darkgrey='\033[1;30m'
 available_providers="intesa vivid revolut"
 
 
-function process() {
+function process_statement() {
+    local inp=$1
+    local out=$2
+    local provider=$3
+    
+    if [ ! -z "$dev" ]; then
+        poetry run cashflow_processor $inp $out --processor $provider
+        return $?
+    fi
+
+    cashflow_processor $inp $out --processor $provider
+}
+
+function process_budget() {
     local inp=$1
     local out=$2
     local provider=$3
 
-    python main.py $inp $out --processor $provider
+    if [ ! -z "$dev" ]; then
+        poetry run budget_processor $inp $out
+        return $?
+    fi
+
+    budget_processor $inp $out
 }
 
-function scan_input() {
+function scan_statements() {
     local file=$1
 
     if [ -f "$file" ]; then
@@ -45,7 +63,7 @@ function extract_provider() {
     echo ""
 }
 
-function make_processed_filepath() {
+function make_transaction_filepath() {
     local file=$1
     local basename=$(basename $file)
     local processed=$(echo $basename | sed 's/\./_processed./')
@@ -56,6 +74,19 @@ function make_processed_filepath() {
     fi
 
     echo "${tmp_dir}/${processed}"
+}
+
+function make_budget_filepath() {
+    local file=$1
+    local basename=$(basename $file)
+    local budget=$(echo $basename | sed 's/\./_budget./')
+
+    if [ -z "$tmp_dir" ]; then
+        echo "${budget}"
+        return
+    fi
+
+    echo "${tmp_dir}/${budget}"
 }
 
 function info() {
@@ -91,6 +122,7 @@ function show_help() {
     printf "  -p  --processor      processor for input files\n"
     printf "  -f, --force          force notion upload without confirmation prompt\n"
     printf "  -d, --debug          show debug information\n"
+    printf "      --dev            use poetry script instead of system installed cashflow processor\n"
     printf "  -h, --help           display this help and exit\n"
 }
 
@@ -113,8 +145,13 @@ function parse_args() {
                 shift
                 shift
                 ;;
-            -u|--notion-url)
-                notion_url=$2
+            --notion-transactions-url)
+                notion_transactions_url=$2
+                shift
+                shift
+                ;;
+            --notion-budget-items-url)
+                notion_budget_times_url=$2
                 shift
                 shift
                 ;;
@@ -130,6 +167,10 @@ function parse_args() {
                 ;;
             -d|--debug)
                 debug=true
+                shift
+                ;;
+            --dev)
+                dev=true
                 shift
                 ;;
             -h|--help)
@@ -150,54 +191,82 @@ function parse_args() {
 
 function main() {
     if [ ! -f .env ]; then
-        $(cat .env | xargs)
+        export $(cat .env | xargs)
     fi
 
     parse_args $@
     set -- "${positional_args[@]}" # restore positional parameters
 
     notion_token=${notion_token:-$NOTION_TOKEN}
-    notion_url=${notion_url:-$NOTION_URL}
+    notion_transactions_url=${notion_transactions_url:-$NOTION_TRANSACTIONS_URL}
+    notion_budget_items_url=${notion_budget_items_url:-$NOTION_BUDGET_ITEMS_URL}
     file=${1:-$FILE}
     tmp_dir=${tmp_dir:-${TMP_DIR:-"/tmp"}}
     processor=${processor:-${PROCESSOR}}
 
     info "you may hide logs by redirecting stderr to /dev/null with \`cashflow.sh 2>/dev/null\`"
 
-    debug "notion_token: $notion_token"
-    debug "notion_url: $notion_url"
+    debug "notion_token: <secret>"
+    debug "notion_transactions_url: $notion_transactions_url"
+    debug "notion_budget_items_url: $notion_budget_items_url"
     debug "file: $file"
     debug "processor: $processor"
     debug "tmp dir: $tmp_dir"
+
+    if [ -z "$notion_token" ]; then
+        error "notion token is not set"
+        printf "An error occurred. Notion v2 token not set\n"
+        exit 1
+    fi
+
+    if [ -z "$notion_transactions_url" ]; then
+        warn "notion transactions url is not set"
+        printf "An error occurred. Transactions database url not set\n"
+        exit 1
+    fi
+
+    if [ -z "$notion_budget_items_url" ]; then
+        warn "notion budget items url is not set"
+        printf "An error occurred. Budget items database url not set\n"
+        exit 1
+    fi
+
+    if ! command -v csv2notion &> /dev/null 2>&1
+    then
+        error "csv2notion is not installed, please install it with \`pip install csv2notion\`"
+        printf "An error occurred. Csv2notion is not intalled\n"
+        exit 1
+    fi
 
     if [ ! -d "$tmp_dir" ]; then
         mkdir -p $tmp_dir
         info "created tmp directory '$tmp_dir'"
     fi
     
-    printf "Scanning for input files... "
+    printf "Scanning for statements... "
 
-    input_files=$(scan_input $file)
-    n_files=$(echo $input_files | wc -w)
+    statement_files=$(scan_statements $file)
+    n_statements=$(echo $statement_files | wc -w)
 
-    printf "OK (${n_files} files found)\n"
+    printf "OK (${n_statements} statements found)\n"
 
-    if [ $n_files -eq 0 ]; then
+    if [ $n_statements -eq 0 ]; then
         info "$file is empty"
+        printf "No statements found\n"
         exit 0
     fi
 
-    printf "Processing files... "
+    printf "Processing statements... "
 
-    for input_file in ${input_files}; do
-        inp=$input_file
-        out=$(make_processed_filepath $input_file)
+    for statement_file in ${statement_files}; do
+        inp=$statement_file
+        out=$(make_transaction_filepath $statement_file)
 
-        provider=$(extract_provider $input_file)
+        provider=$(extract_provider $statement_file)
 
         if [ -z "$provider" ]; then
             if [ -z "$processor" ]; then
-                printf "\rProcessing files... FAILED\n"
+                printf "\rProcessing statements... FAILED\n"
                 error "could not infer processor from file name, please specify a processor"
                 exit 1
             fi
@@ -210,16 +279,32 @@ function main() {
             warn "output file '$out' already exists, overwriting"
         fi
 
-        cmd_output=$(( process $inp $out $provider ) 2>&1)
+        cmd_output=$(( process_statement $inp $out $provider ) 2>&1)
 
         if [ $? -ne 0 ]; then
-            printf "\rProcessing files... FAILED\n"
+            printf "\rProcessing statements... FAILED\n"
             error "failed processing $inp with provider $provider"
             printf "$cmd_output\n" >&2
             exit 1
         fi
     done
-    printf "\rProcessing files... OK\n"
+    printf "\rProcessing statements... OK\n"
+
+    printf "Processing budget items... "
+    for statement_file in ${statement_files}; do
+        transactions_file=$(make_transaction_filepath $statement_file)
+        budget_items_file=$(make_budget_filepath $statement_file)
+
+        cmd_output=$(( process_budget $transactions_file $budget_items_file ) 2>&1)
+
+        if [ $? -ne 0 ]; then
+            printf "FAILED\n"
+            error "failed processing budget items for $statement_file"
+            printf "$cmd_output\n" >&2
+            exit 1
+        fi
+    done
+    printf "OK\n"
 
     if [ -z "$force" ]; then
         printf "${orange}If you proceed, processed file will be uploaded. Continue? [y/N] ${nocolor}"
@@ -230,20 +315,26 @@ function main() {
         fi
     fi
 
-    printf "Uploading to notion... "
-    for input_file in ${input_files}; do
-        output_file=$(make_processed_filepath $input_file)
-        inp=$input_file
-        out=$output_file
+    printf "Uploading budget items to notion... "
+    for statement_file in ${statement_files}; do
+        budget_file=$(make_budget_filepath $statement_file)
 
-        if ! command -v csv2notion &> /dev/null 2>&1
-        then
+        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_budget_items_url}" --merge --add-missing-relations --icon-column Icon ${budget_file} 2>&1)
+
+        if [ $? -ne 0 ]; then
             printf "FAILED\n"
-            error "csv2notion is not installed, please install it with \`pip install csv2notion\`"
+            error "failed uploading $budget_item_file to notion"
+            printf "$cmd_output\n"
             exit 1
         fi
+    done
+    printf "OK\n"
 
-        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_url}" --merge --add-missing-relations ${out} 2>&1)
+    printf "Uploading transactions to notion... "
+    for statement_file in ${statement_files}; do
+        transaction_file=$(make_transaction_filepath $statement_file)
+
+        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_transactions_url}" --merge --add-missing-relations ${transaction_file} 2>&1)
 
         if [ $? -ne 0 ]; then
             printf "FAILED\n"
