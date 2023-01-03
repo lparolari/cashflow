@@ -116,13 +116,18 @@ function show_help() {
     printf "cashflow and budget manager in notion.\n"
     printf "Currently supported bank statements are: intesa, vivid, revolut.\n"
     printf "\n"
+    printf "Options:\n"
     printf "  -t, --notion-token   token for notion APIs\n"
-    printf "  -u, --notion-url     url representing a notion database\n"
+    printf "      --notion-transactions-database-url\n"
+    printf "                       url to transactions database\n"
+    printf "      --notion-budget-month-database-url\n"
+    printf "                       url to budget month database\n"
     printf "  -o, --tmp-dir        directory where processed file are saved\n"
     printf "  -p  --processor      processor for input files\n"
     printf "  -f, --force          force notion upload without confirmation prompt\n"
     printf "  -d, --debug          show debug information\n"
-    printf "      --dev            use poetry script instead of system installed cashflow processor\n"
+    printf "      --dev            use poetry script instead of system installed cashflow\n"
+    printf "                       and budget processor\n"
     printf "  -h, --help           display this help and exit\n"
 }
 
@@ -145,13 +150,13 @@ function parse_args() {
                 shift
                 shift
                 ;;
-            --notion-transactions-url)
-                notion_transactions_url=$2
+            --notion-transactions-database-url)
+                notion_transactions_database_url=$2
                 shift
                 shift
                 ;;
-            --notion-budget-items-url)
-                notion_budget_times_url=$2
+            --notion-budget-month-database-url)
+                notion_budget_month_database_url=$2
                 shift
                 shift
                 ;;
@@ -198,8 +203,8 @@ function main() {
     set -- "${positional_args[@]}" # restore positional parameters
 
     notion_token=${notion_token:-$NOTION_TOKEN}
-    notion_transactions_url=${notion_transactions_url:-$NOTION_TRANSACTIONS_URL}
-    notion_budget_items_url=${notion_budget_items_url:-$NOTION_BUDGET_ITEMS_URL}
+    notion_transactions_database_url=${notion_transactions_database_url:-$NOTION_TRANSACTIONS_DATABASE_URL}
+    notion_budget_month_database_url=${notion_budget_month_database_url:-$NOTION_BUDGET_MONTH_DATABASE_URL}
     file=${1:-$FILE}
     tmp_dir=${tmp_dir:-${TMP_DIR:-"/tmp"}}
     processor=${processor:-${PROCESSOR}}
@@ -207,8 +212,8 @@ function main() {
     info "you may hide logs by redirecting stderr to /dev/null with \`cashflow.sh 2>/dev/null\`"
 
     debug "notion_token: <secret>"
-    debug "notion_transactions_url: $notion_transactions_url"
-    debug "notion_budget_items_url: $notion_budget_items_url"
+    debug "notion_transactions_database_url: $notion_transactions_database_url"
+    debug "notion_budget_month_database_url: $notion_budget_month_database_url"
     debug "file: $file"
     debug "processor: $processor"
     debug "tmp dir: $tmp_dir"
@@ -219,14 +224,14 @@ function main() {
         exit 1
     fi
 
-    if [ -z "$notion_transactions_url" ]; then
-        warn "notion transactions url is not set"
+    if [ -z "$notion_transactions_database_url" ]; then
+        warn "notion transactions database url is not set"
         printf "An error occurred. Transactions database url not set\n"
         exit 1
     fi
 
-    if [ -z "$notion_budget_items_url" ]; then
-        warn "notion budget items url is not set"
+    if [ -z "$notion_budget_month_database_url" ]; then
+        warn "notion budget month database url is not set"
         printf "An error occurred. Budget items database url not set\n"
         exit 1
     fi
@@ -319,7 +324,7 @@ function main() {
     for statement_file in ${statement_files}; do
         budget_file=$(make_budget_filepath $statement_file)
 
-        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_budget_items_url}" --merge --add-missing-relations --icon-column Icon ${budget_file} 2>&1)
+        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_budget_month_database_url}" --merge --add-missing-relations --icon-column Icon ${budget_file} 2>&1)
 
         if [ $? -ne 0 ]; then
             printf "FAILED\n"
@@ -334,7 +339,7 @@ function main() {
     for statement_file in ${statement_files}; do
         transaction_file=$(make_transaction_filepath $statement_file)
 
-        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_transactions_url}" --merge --add-missing-relations ${transaction_file} 2>&1)
+        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_transactions_database_url}" --merge --add-missing-relations ${transaction_file} 2>&1)
 
         if [ $? -ne 0 ]; then
             printf "FAILED\n"
