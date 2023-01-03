@@ -5,8 +5,7 @@ description = "Import transaction in Notion cashflow and budget manager"
 authors = ["lparolari <luca.parolari23@gmail.com>"]
 license = "MIT"
 packages = [
-    { include = "statement" },
-    { include = "budget" },
+    { include = "cashflow" },
 ]
 
 [tool.poetry.dependencies]
@@ -17,8 +16,8 @@ pandas = "^1.5.2"
 black = "^22.12.0"
 
 [tool.poetry.scripts]
-statement_processor = 'statement.cli:main'
-budget_processor = 'budget.cli:main'
+statement_processor = 'cashflow.statement.cli:main'
+budget_processor = 'cashflow.budget.cli:main'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

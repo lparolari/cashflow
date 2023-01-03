@@ -1,4 +1,4 @@
-from cashflow.vocab import Vocab
+from cashflow.statement.vocab import Vocab
 
 
 class CategoryClassifier:

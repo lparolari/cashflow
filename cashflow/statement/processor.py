@@ -3,8 +3,8 @@ from hashlib import sha256
 
 import pandas as pd
 
-from statement.category import CategoryClassifier
-from statement.budget import BudgetClassifier
+from cashflow.statement.category import CategoryClassifier
+from cashflow.statement.budget import BudgetClassifier
 
 
 class StatementProcessor:
