@@ -4,7 +4,7 @@ orange='\033[0;33m'
 blue='\033[0;34m'
 darkgrey='\033[1;30m'
 
-available_providers="intesa vivid revolut"
+available_statement_processors="intesa vivid revolut"
 
 
 function process_statement() {
@@ -49,13 +49,13 @@ function scan_statements() {
     find . -type f -regex ".*${file}.*\(csv\)"
 }
 
-function extract_provider() {
+function extract_statement_processor() {
     local file=$1
     local basename=$(basename $file)
     
-    for provider in $available_providers; do
-        if [[ $basename == *$provider* ]]; then
-            echo $provider
+    for processor in $available_statement_processors; do
+        if [[ $basename == *$processor* ]]; then
+            echo $processor
             return
         fi
     done
@@ -123,7 +123,6 @@ function show_help() {
     printf "      --notion-budget-month-database-url\n"
     printf "                       url to budget month database\n"
     printf "  -o, --tmp-dir        directory where processed file are saved\n"
-    printf "  -p  --processor      processor for input files\n"
     printf "  -f, --force          force notion upload without confirmation prompt\n"
     printf "  -d, --debug          show debug information\n"
     printf "      --dev            use poetry script instead of system installed cashflow\n"
@@ -165,11 +164,6 @@ function parse_args() {
                 shift
                 shift
                 ;;
-            -p|--processor)
-                processor=$2
-                shift
-                shift
-                ;;
             -d|--debug)
                 debug=true
                 shift
@@ -207,7 +201,6 @@ function main() {
     notion_budget_month_database_url=${notion_budget_month_database_url:-$NOTION_BUDGET_MONTH_DATABASE_URL}
     file=${1:-$FILE}
     tmp_dir=${tmp_dir:-${TMP_DIR:-"/tmp"}}
-    processor=${processor:-${PROCESSOR}}
 
     info "you may hide logs by redirecting stderr to /dev/null with \`cashflow.sh 2>/dev/null\`"
 
@@ -267,28 +260,24 @@ function main() {
         inp=$statement_file
         out=$(make_transaction_filepath $statement_file)
 
-        provider=$(extract_provider $statement_file)
+        processor=$(extract_statement_processor $statement_file)
 
-        if [ -z "$provider" ]; then
-            if [ -z "$processor" ]; then
-                printf "\rProcessing statements... FAILED\n"
-                error "could not infer processor from file name, please specify a processor"
-                exit 1
-            fi
+        if [ -z "$processor" ]; then
+            printf "\rProcessing statements... FAILED\n"
+            error "could not infer processor from file name"
+            exit 1
         fi
-
-        provider=${processor:-$provider}
 
         if [ -f "$out" ]; then
             printf "\r"
             warn "output file '$out' already exists, overwriting"
         fi
 
-        cmd_output=$(( process_statement $inp $out $provider ) 2>&1)
+        cmd_output=$(( process_statement $inp $out $processor ) 2>&1)
 
         if [ $? -ne 0 ]; then
             printf "\rProcessing statements... FAILED\n"
-            error "failed processing $inp with provider $provider"
+            error "failed processing $inp with processor $processor"
             printf "$cmd_output\n" >&2
             exit 1
         fi
