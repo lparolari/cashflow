@@ -208,7 +208,6 @@ function main() {
     debug "notion_transactions_database_url: $notion_transactions_database_url"
     debug "notion_budget_month_database_url: $notion_budget_month_database_url"
     debug "file: $file"
-    debug "processor: $processor"
     debug "tmp dir: $tmp_dir"
 
     if [ -z "$notion_token" ]; then
