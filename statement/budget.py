@@ -1,4 +1,4 @@
-from cashflow.vocab import Vocab
+from statement.vocab import Vocab
 
 
 class BudgetClassifier:

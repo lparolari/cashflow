@@ -2,10 +2,10 @@ import argparse
 
 import pandas as pd
 
-from cashflow.budget import BudgetClassifier
-from cashflow.category import CategoryClassifier
-from cashflow.processor import get_processor_cls
-from cashflow.vocab import Vocab
+from statement.budget import BudgetClassifier
+from statement.category import CategoryClassifier
+from statement.processor import get_processor_cls
+from statement.vocab import Vocab
 
 
 def main():
