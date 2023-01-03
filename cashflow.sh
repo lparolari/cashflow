@@ -13,11 +13,11 @@ function process_statement() {
     local provider=$3
     
     if [ ! -z "$dev" ]; then
-        poetry run cashflow_processor $inp $out --processor $provider
+        poetry run statement_processor $inp $out --processor $provider
         return $?
     fi
 
-    cashflow_processor $inp $out --processor $provider
+    statement_processor $inp $out --processor $provider
 }
 
 function process_budget() {
