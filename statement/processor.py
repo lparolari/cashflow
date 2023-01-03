@@ -3,11 +3,11 @@ from hashlib import sha256
 
 import pandas as pd
 
-from cashflow.category import CategoryClassifier
-from cashflow.budget import BudgetClassifier
+from statement.category import CategoryClassifier
+from statement.budget import BudgetClassifier
 
 
-class Processor:
+class StatementProcessor:
     def __init__(self, df: pd.DataFrame, category_classifier: CategoryClassifier, budget_classifier: BudgetClassifier):
         self.inp = df
         self.out = None
@@ -25,7 +25,7 @@ class Processor:
         df = self.add_category(df)
         df = self.add_budget(df)
         df = self.add_month(df)
-        df = self.add_cashflow(df)
+        df = self.add_budget_month(df)
         df = self.format_date(df)
         df = self.order_columns(df)
 
@@ -67,8 +67,8 @@ class Processor:
 
         return df
 
-    def add_cashflow(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["Cashflow"] = df["Month"] + " | " + df["Budget"]
+    def add_budget_month(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["Budget Month"] = df["Month"] + " | " + df["Budget"]
 
         return df
 
@@ -79,7 +79,7 @@ class Processor:
 
     def order_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         return df[
-            ["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month", "Cashflow"]
+            ["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month", "Budget Month"]
         ]
 
     def preflight_check(self, df: pd.DataFrame) -> None:
@@ -105,7 +105,7 @@ class Processor:
         return self.out
 
 
-class RevolutProcessor(Processor):
+class RevolutProcessor(StatementProcessor):
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         # Example
@@ -149,7 +149,7 @@ class RevolutProcessor(Processor):
         return df
 
 
-class IntesaProcessor(Processor):
+class IntesaProcessor(StatementProcessor):
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         # fix csv errors
 
@@ -190,7 +190,7 @@ class IntesaProcessor(Processor):
         return df
 
 
-class VividProcessor(Processor):
+class VividProcessor(StatementProcessor):
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         df = self.inp.copy()
 
