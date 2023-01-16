@@ -25,7 +25,10 @@ class StatementProcessor:
         df = self.add_category(df)
         df = self.add_budget(df)
         df = self.add_month(df)
+        df = self.add_month_inflow(df)
+        df = self.add_month_outflow(df)
         df = self.add_budget_month(df)
+        df = self.add_provider(df)
         df = self.format_date(df)
         df = self.order_columns(df)
 
@@ -72,6 +75,27 @@ class StatementProcessor:
 
         return df
 
+    def add_month_inflow(self, df: pd.DataFrame) -> pd.DataFrame:
+        cond = df["Amount"] >= 0
+        
+        df.loc[cond, "Month Inflow"] = df["Month"]
+        df.loc[~cond, "Month Inflow"] = ""
+
+        return df
+    
+    def add_month_outflow(self, df: pd.DataFrame) -> pd.DataFrame:
+        cond = df["Amount"] < 0
+
+        df.loc[cond, "Month Outflow"] = df["Month"]
+        df.loc[~cond, "Month Outflow"] = ""
+
+        return df
+    
+    def add_provider(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["Provider"] = self.provider
+
+        return df
+
     def format_date(self, df: pd.DataFrame) -> pd.DataFrame:
         df["Date"] = df["Date"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -79,7 +103,7 @@ class StatementProcessor:
 
     def order_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         return df[
-            ["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month", "Budget Month"]
+            ["UUID", "Description", "Date", "Amount", "Category", "Budget", "Month", "Month Inflow", "Month Outflow", "Budget Month", "Provider"]
         ]
 
     def preflight_check(self, df: pd.DataFrame) -> None:
@@ -97,7 +121,21 @@ class StatementProcessor:
             raise ValueError("Column 'Date' should be a datetime")
 
     def validate(self, df: pd.DataFrame) -> None:
-        pass
+        month = df["Month"].unique()
+        month_inflow = df["Month Inflow"].unique()
+        month_outflow = df["Month Outflow"].unique()
+        
+        if not all([x in month or x == "" for x in month_inflow]):
+            raise ValueError("Month Inflow is not a subset of Month")
+
+        if not all([x in month or x == "" for x in month_outflow]):
+            raise ValueError("Month Outflow is not a subset of Month")
+        
+        outflow_isnull = df["Month Inflow"] == ""
+        inflow_isnull = df["Month Outflow"] == ""
+
+        if not all([x != y for x, y in zip(outflow_isnull, inflow_isnull)]):
+            raise ValueError("Either Month Inflow or Month Outflow should be populated, but not both")
 
     def unwrap(self) -> pd.DataFrame:
         if self.out is None:
@@ -106,6 +144,8 @@ class StatementProcessor:
 
 
 class RevolutProcessor(StatementProcessor):
+    provider = "revolut"
+
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         # Example
@@ -150,6 +190,8 @@ class RevolutProcessor(StatementProcessor):
 
 
 class IntesaProcessor(StatementProcessor):
+    provider = "intesa"
+
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         # fix csv errors
 
@@ -191,6 +233,8 @@ class IntesaProcessor(StatementProcessor):
 
 
 class VividProcessor(StatementProcessor):
+    provider = "vivid"
+
     def convert(self, df: pd.DataFrame) -> pd.DataFrame:
         df = self.inp.copy()
 
