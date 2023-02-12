@@ -30,6 +30,7 @@ class StatementProcessor:
         df = self.add_budget_month(df)
         df = self.add_provider(df)
         df = self.format_date(df)
+        df = self.format_description(df)
         df = self.order_columns(df)
 
         self.validate(df)
@@ -98,6 +99,11 @@ class StatementProcessor:
 
     def format_date(self, df: pd.DataFrame) -> pd.DataFrame:
         df["Date"] = df["Date"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        return df
+
+    def format_description(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["Description"] = df["Description"].str.replace("\n", " ")
 
         return df
 
