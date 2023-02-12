@@ -189,7 +189,7 @@ function parse_args() {
 }
 
 function main() {
-    if [ ! -f .env ]; then
+    if [ -f .env ]; then
         export $(cat .env | xargs)
     fi
 
