@@ -14,5 +14,7 @@
   "pedaggi e telepass": "car",
   "tv internet telefono": "utilities",
   "salute e benessere varie": "personal care",
-  "gas & energia elettrica": "home"
+  "gas & energia elettrica": "home",
+  "spese condominiali": "home",
+  "trasporti noleggi taxi e parcheggi": "transit"
 }
