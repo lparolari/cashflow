@@ -312,7 +312,7 @@ function main() {
     for statement_file in ${statement_files}; do
         budget_file=$(make_budget_filepath $statement_file)
 
-        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_budget_month_database_url}" --merge --add-missing-relations --icon-column Icon ${budget_file} 2>&1)
+        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_budget_month_database_url}" --merge --icon-column Icon ${budget_file} 2>&1)
 
         if [ $? -ne 0 ]; then
             printf "FAILED\n"
