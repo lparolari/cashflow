@@ -20,19 +20,6 @@ function process_statement() {
     statement_processor $inp $out --processor $provider
 }
 
-function process_budget() {
-    local inp=$1
-    local out=$2
-    local provider=$3
-
-    if [ ! -z "$dev" ]; then
-        poetry run budget_processor $inp $out
-        return $?
-    fi
-
-    budget_processor $inp $out
-}
-
 function scan_statements() {
     local file=$1
 
@@ -74,19 +61,6 @@ function make_transaction_filepath() {
     fi
 
     echo "${tmp_dir}/${processed}"
-}
-
-function make_budget_filepath() {
-    local file=$1
-    local basename=$(basename $file)
-    local budget=$(echo $basename | sed 's/\./_budget./')
-
-    if [ -z "$tmp_dir" ]; then
-        echo "${budget}"
-        return
-    fi
-
-    echo "${tmp_dir}/${budget}"
 }
 
 function info() {
@@ -283,21 +257,9 @@ function main() {
     done
     printf "\rProcessing statements... OK\n"
 
-    printf "Processing budget items... "
-    for statement_file in ${statement_files}; do
-        transactions_file=$(make_transaction_filepath $statement_file)
-        budget_items_file=$(make_budget_filepath $statement_file)
-
-        cmd_output=$(( process_budget $transactions_file $budget_items_file ) 2>&1)
-
-        if [ $? -ne 0 ]; then
-            printf "FAILED\n"
-            error "failed processing budget items for $statement_file"
-            printf "$cmd_output\n" >&2
-            exit 1
-        fi
-    done
-    printf "OK\n"
+    printf "${orange}YOU HAVE TO MANUALLY CREATE BUDGET ITEMS FOR EACH MONTH OF TRANSACTION TO UPLOAD${nocolor}\n"
+    printf "${orange}I'm waiting... Press a key to continue ${nocolor}"
+    read -r answer
 
     if [ -z "$force" ]; then
         printf "${orange}If you proceed, processed file will be uploaded. Continue? [y/N] ${nocolor}"
@@ -307,21 +269,6 @@ function main() {
             exit 0
         fi
     fi
-
-    printf "Uploading budget items to notion... "
-    for statement_file in ${statement_files}; do
-        budget_file=$(make_budget_filepath $statement_file)
-
-        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_budget_month_database_url}" --merge --icon-column Icon ${budget_file} 2>&1)
-
-        if [ $? -ne 0 ]; then
-            printf "FAILED\n"
-            error "failed uploading $budget_item_file to notion"
-            printf "$cmd_output\n"
-            exit 1
-        fi
-    done
-    printf "OK\n"
 
     printf "Uploading transactions to notion... "
     for statement_file in ${statement_files}; do
