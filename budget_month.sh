@@ -1,13 +1,36 @@
-function parse_args() {
+# *******************************************************************
+# *************************** HELPERS *******************************
+# *******************************************************************
+
+nocolor='\033[0m'
+red='\033[0;31m'
+orange='\033[0;33m'
+blue='\033[0;34m'
+darkgrey='\033[1;30m'
+
+function _show_help() {
+    printf "Usage: $0 [OPTION]...\n"
+    printf "\n"
+    printf "Generate and upload days to notion.\n"
+    printf "\n"
+    printf "Options:\n"
+    printf "  -m, --month          the month to generate (format: YYYY-MM, eg: 2023-07) \n"
+    printf "  -h, --help           display this help and exit\n"
+}
+
+function _error() {
+    printf "${red}ERR${nocolor}: $1\n" >&2
+}
+
+function _info() {
+    printf "${blue}INFO${nocolor}: $1\n" >&2
+}
+
+function _parse_args() {
     positional_args=()
 
     if [ $# -eq 0 ]; then
-        printf "Usage: $0 [OPTION]...\n"
-        printf "\n"
-        printf "Generate and upload days to notion.\n"
-        printf "\n"
-        printf "Options:\n"
-        printf "  -m, --month          month\n"
+        _show_help
         exit 0
     fi
 
@@ -18,8 +41,12 @@ function parse_args() {
                 shift
                 shift
                 ;;
+            -h|--help)
+                _show_help
+                exit 0
+                ;;
             -*|--*)
-                error "Unknown option $1"
+                _error "Unknown option $1"
                 exit 1
                 ;;
             *)
@@ -30,29 +57,33 @@ function parse_args() {
     done
 }
 
+# *******************************************************************
+# ***************************** MAIN ********************************
+# *******************************************************************
+
 function main() {
     if [ -f .env ]; then
         export $(cat .env | xargs)
     fi
 
-    parse_args $@
+    _parse_args $@
     set -- "${positional_args[@]}" # restore positional parameters
 
     notion_token=${NOTION_TOKEN}
     notion_budget_month_database_url=${NOTION_BUDGET_MONTH_DATABASE_URL}
 
     if [ -z "$notion_token" ]; then
-        error "Notion token is not set"
+        _error "notion token is not set"
         exit 1
     fi
 
     if [ -z "$notion_budget_month_database_url" ]; then
-        error "Budget month database url is not set"
+        _error "budget month database url is not set"
         exit 1
     fi
 
     if [ -z "$month" ]; then
-        error "Month is not set"
+        _error "month is not set"
         exit 1
     fi
 
@@ -61,8 +92,8 @@ function main() {
     cmd_output=$(poetry run budget_processor --month "$month" "$file" 2>&1)
 
     if [ $? -ne 0 ]; then
-        error "Failed to generate budget month file"
-        error "$cmd_output"
+        _error "failed to generate budget month file"
+        _error "$cmd_output"
         exit 1
     fi
 
