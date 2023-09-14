@@ -17,5 +17,8 @@
   "gas & energia elettrica": "home",
   "spese condominiali": "home",
   "trasporti noleggi taxi e parcheggi": "transit",
-  "tempo libero varie": "personal care"
+  "tempo libero varie": "personal care",
+  "elettrodomestici arredamento e giardino": "utilities",
+  "assegni incassati": "inflow",
+  "bonifici ricevuti": "inflow"
 }
