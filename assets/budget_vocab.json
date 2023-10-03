@@ -20,5 +20,9 @@
   "tempo libero varie": "personal care",
   "elettrodomestici arredamento e giardino": "utilities",
   "assegni incassati": "inflow",
-  "bonifici ricevuti": "inflow"
+  "bonifici ricevuti": "inflow",
+  "prelievi": "inflow",
+  "viaggi e vacanze": "leisure & entertainment",
+  "donazioni": "gifting",
+  "imposte bolli e commissioni": "home"
 }
