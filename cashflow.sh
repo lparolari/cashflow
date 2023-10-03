@@ -274,7 +274,14 @@ function main() {
     for statement_file in ${statement_files}; do
         transaction_file=$(make_transaction_filepath $statement_file)
 
-        cmd_output=$(csv2notion --token "${notion_token}" --url "${notion_transactions_database_url}" --merge --add-missing-relations ${transaction_file} 2>&1)
+        debug "processing $transaction_file"
+
+        cmd_output=$(csv2notion --token "${notion_token}" \
+                                --url "${notion_transactions_database_url}" \
+                                --merge \
+                                --add-missing-relations \
+                                --max-threads 1 \
+                                "${transaction_file}")
 
         if [ $? -ne 0 ]; then
             printf "FAILED\n"
