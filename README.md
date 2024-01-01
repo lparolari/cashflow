@@ -53,7 +53,7 @@ Such type of solution usually suffers some problems like
 * limited functionalities;
 * limited customization (the way one manage finance is extremely personal);
 * bloated interfaces; and
-* expansive subscriptions
+* expensive subscriptions
 
 This project aims to partially solve some of this problems by combining
 [Notion](https://www.notion.so/) - the most popular no-code platform - with some
