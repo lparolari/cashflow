@@ -130,7 +130,12 @@ function main() {
         fi
     fi
 
-    csv2notion --token "${notion_token}" --url "${notion_days_database_url}" --merge --icon-column Icon ${file} 2>&1
+    csv2notion --token "${notion_token}" \
+      --url "${notion_days_database_url}" \
+      --merge \
+      --icon-column Icon \
+      --max-threads 1 \
+      ${file} 2>&1
 }
 
 function run_generate_days() {
