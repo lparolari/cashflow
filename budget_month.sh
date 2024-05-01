@@ -107,7 +107,13 @@ function main() {
         exit 0
     fi
 
-    csv2notion --token "${notion_token}" --url "${notion_budget_month_database_url}" --merge --icon-column Icon ${file}
+    csv2notion \
+      --token "${notion_token}" \
+      --url "${notion_budget_month_database_url}" \
+      --merge \
+      --max-threads 1 \
+      --icon-column Icon \
+      ${file}
 }
 
 main "$@"
