@@ -5,6 +5,8 @@ blue='\033[0;34m'
 darkgrey='\033[1;30m'
 
 available_statement_processors="intesa vivid revolut"
+csv2notion_supported_backends="csv2notion csv2notion_neo"
+csv2notion_default_backend="csv2notion"
 
 
 function process_statement() {
@@ -96,6 +98,12 @@ function show_help() {
     printf "                       url to transactions database\n"
     printf "      --notion-budget-month-database-url\n"
     printf "                       url to budget month database\n"
+    printf "      --notion-workspace\n"
+    printf "                       workspace name in notion (e.g. John Doe's Notion)\n"
+    printf "      --csv2notion-backend\n"
+    printf "                       backend to use for uploading csv to notion\n"
+    printf "                       available options are "csv2notion", "csv2notion_neo"\n"
+    printf "                       default is "csv2notion"\n"
     printf "  -o, --tmp-dir        directory where processed file are saved\n"
     printf "  -f, --force          force notion upload without confirmation prompt\n"
     printf "  -d, --debug          show debug information\n"
@@ -130,6 +138,16 @@ function parse_args() {
                 ;;
             --notion-budget-month-database-url)
                 notion_budget_month_database_url=$2
+                shift
+                shift
+                ;;
+            --notion-workspace)
+                notion_workspace=$2
+                shift
+                shift
+                ;;
+            --csv2notion-backend)
+                csv2notion_backend=$2
                 shift
                 shift
                 ;;
@@ -173,14 +191,18 @@ function main() {
     notion_token=${notion_token:-$NOTION_TOKEN}
     notion_transactions_database_url=${notion_transactions_database_url:-$NOTION_TRANSACTIONS_DATABASE_URL}
     notion_budget_month_database_url=${notion_budget_month_database_url:-$NOTION_BUDGET_MONTH_DATABASE_URL}
+    notion_workspace=${notion_workspace:-$NOTION_WORKSPACE}
     file=${1:-$FILE}
     tmp_dir=${tmp_dir:-${TMP_DIR:-"/tmp"}}
+    csv2notion_backend=${csv2notion_backend:-$csv2notion_default_backend}
 
     info "you may hide logs by redirecting stderr to /dev/null with \`cashflow.sh 2>/dev/null\`"
 
     debug "notion_token: <secret>"
     debug "notion_transactions_database_url: $notion_transactions_database_url"
     debug "notion_budget_month_database_url: $notion_budget_month_database_url"
+    debug "notion_workspace: $notion_workspace"
+    debug "csv2notion_backend: $csv2notion_backend"
     debug "file: $file"
     debug "tmp dir: $tmp_dir"
 
@@ -202,10 +224,22 @@ function main() {
         exit 1
     fi
 
-    if ! command -v csv2notion &> /dev/null 2>&1
+    if [ -z "$notion_workspace" ]; then
+        error "notion workspace is not set"
+        printf "An error occurred. Workspace not set\n"
+        exit 1
+    fi
+
+    if [[ ! " ${csv2notion_supported_backends[@]} " =~ " ${csv2notion_backend} " ]]; then
+        error "csv2notion backend '${csv2notion_backend}' is not supported"
+        printf "An error occurred. Backend '${csv2notion_backend}' not supported\n"
+        exit 1
+    fi
+
+    if ! command -v $csv2notion_backend &> /dev/null 2>&1
     then
-        error "csv2notion is not installed, please install it with \`pip install csv2notion\`"
-        printf "An error occurred. Csv2notion is not intalled\n"
+        error "csv2notion backend '${csv2notion_backend}' is not installed, please install it with \`pip install ${csv2notion_backend}\`"
+        printf "An error occurred. Backend '${csv2notion_backend}' not intalled\n"
         exit 1
     fi
 
@@ -276,12 +310,13 @@ function main() {
 
         debug "processing $transaction_file"
 
-        cmd_output=$(csv2notion --token "${notion_token}" \
-                                --url "${notion_transactions_database_url}" \
-                                --merge \
-                                --add-missing-relations \
-                                --max-threads 1 \
-                                "${transaction_file}")
+        cmd_output=$($csv2notion_backend \
+            --token "${notion_token}" \
+            --url "${notion_transactions_database_url}" \
+            --merge \
+            --add-missing-relations \
+            --max-threads 1 \
+            "${transaction_file}")
 
         if [ $? -ne 0 ]; then
             printf "FAILED\n"
