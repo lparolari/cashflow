@@ -182,7 +182,7 @@ function parse_args() {
 
 function main() {
     if [ -f .env ]; then
-        export $(cat .env | xargs)
+        export $(grep -v '^#' .env | xargs)
     fi
 
     parse_args $@
@@ -312,6 +312,7 @@ function main() {
 
         cmd_output=$($csv2notion_backend \
             --token "${notion_token}" \
+            --workspace "${notion_workspace}" \
             --url "${notion_transactions_database_url}" \
             --merge \
             --add-missing-relations \
