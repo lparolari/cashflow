@@ -63,7 +63,7 @@ function _parse_args() {
 
 function main() {
     if [ -f .env ]; then
-        export $(cat .env | xargs)
+        export $(grep -v '^#' .env | xargs)
     fi
 
     _parse_args $@
@@ -107,7 +107,8 @@ function main() {
         exit 0
     fi
 
-    csv2notion \
+    csv2notion_neo \
+      --workspace "Luca Parolari's Notion" \
       --token "${notion_token}" \
       --url "${notion_budget_month_database_url}" \
       --merge \
