@@ -204,7 +204,7 @@ class IntesaProcessor(StatementProcessor):
         df["Categoria"] = df["Categoria "]  # fix typo
         df = df.drop(columns=["Categoria "])
 
-        df["Importo"] = df["Importo"].str.replace(",", "").astype(float)
+        df["Importo"] = df["Importo"].astype(str).str.replace(",", "").astype(float)
 
         df["Operazione"] = df["Operazione"].str.replace(",", "")
         df["Categoria"] = df["Categoria"].str.replace(",", "")
