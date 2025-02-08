@@ -291,9 +291,9 @@ function main() {
     done
     printf "\rProcessing statements... OK\n"
 
-    printf "${orange}YOU HAVE TO MANUALLY CREATE BUDGET ITEMS FOR EACH MONTH OF TRANSACTION TO UPLOAD${nocolor}\n"
-    printf "${orange}I'm waiting... Press a key to continue ${nocolor}"
-    read -r answer
+    # printf "${orange}YOU HAVE TO MANUALLY CREATE BUDGET ITEMS FOR EACH MONTH OF TRANSACTION TO UPLOAD${nocolor}\n"
+    # printf "${orange}I'm waiting... Press a key to continue ${nocolor}"
+    # read -r answer
 
     if [ -z "$force" ]; then
         printf "${orange}If you proceed, processed file will be uploaded. Continue? [y/N] ${nocolor}"
