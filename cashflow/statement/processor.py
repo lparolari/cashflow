@@ -266,11 +266,53 @@ class VividProcessor(StatementProcessor):
         return df
 
 
+class IngProcessor(StatementProcessor):
+    provider = "ing"
+
+    def convert(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = self.inp.copy()
+
+        # drop "saldo iniziale" and "saldo finale" rows
+        df = df.drop([0, len(df) - 1]).reset_index(drop=True)
+
+        df["Date"] = pd.to_datetime(df["DATA CONTABILE"], format="%d/%m/%Y")
+        df["Description"] = (df["CAUSALE"] + " " + df["DESCRIZIONE OPERAZIONE"]).str.lower()
+        money_in = (
+            df["ENTRATE"].astype(str)
+            .str.replace('.', '', regex=False)  # Remove dots
+            .str.replace(',', '.', regex=False)  # Replace comma with a dot
+            .apply(pd.to_numeric, errors='coerce')  # Convert to float, NaN for invalid
+            .fillna(0)  # Replace NaN with 0
+        )
+        money_out = (
+            df["USCITE"].astype(str)
+            .str.replace('.', '', regex=False)  # Remove dots
+            .str.replace(',', '.', regex=False)  # Replace comma with a dot
+            .apply(pd.to_numeric, errors='coerce')  # Convert to float, NaN for invalid
+            .fillna(0)  # Replace NaN with 0
+        )
+        df["Amount"] = money_in + money_out
+
+        df = df.drop(
+            columns=[
+                "DATA CONTABILE",
+                "DATA VALUTA",
+                "ENTRATE",
+                "USCITE",
+                "CAUSALE",
+                "DESCRIZIONE OPERAZIONE",
+            ]
+        )
+
+        return df
+
+
 def get_processor_cls(processor: str):
     processors = {
         "revolut": RevolutProcessor,
         "intesa": IntesaProcessor,
         "vivid": VividProcessor,
+        "ing": IngProcessor,
     }
 
     processor_cls = processors.get(processor)

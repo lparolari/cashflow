@@ -16,7 +16,7 @@ def main():
     parser.add_argument("output", help="Path to processed statement")
     parser.add_argument(
         "--processor",
-        choices=["revolut", "intesa", "vivid"],
+        choices=["revolut", "intesa", "vivid", "ing"],
         required=True,
         help="Statement processor to use",
     )
@@ -54,7 +54,7 @@ def main():
         Vocab.from_json(budget_vocab_path), retrain=retrain
     )
 
-    df = pd.read_csv(input_file)
+    df = pd.read_csv(input_file, sep=None)
 
     processor_cls = get_processor_cls(processor)
     processor = processor_cls(
