@@ -207,6 +207,8 @@ class IntesaProcessor(StatementProcessor):
         df["Importo"] = df["Importo"].astype(str).str.replace(",", "").astype(float)
 
         df["Operazione"] = df["Operazione"].str.replace(",", "")
+        df["Dettagli"] = df["Dettagli"].str.replace(",", "")
+        df["Conto o carta"] = df["Conto o carta"].str.replace(",", "")
         df["Categoria"] = df["Categoria"].str.replace(",", "")
 
         # process values
@@ -214,7 +216,11 @@ class IntesaProcessor(StatementProcessor):
         # df["UUID"] = self.uuid
 
         df["Operazione"] = df["Operazione"].str.lower()
+        df["Dettagli"] = df["Dettagli"].str.lower()
+        df["Conto o carta"] = df["Conto o carta"].str.lower()
         df["Categoria"] = df["Categoria"].str.lower()
+
+        df["Operazione"] = df["Operazione"] + " " + df["Dettagli"] + " " + df["Conto o carta"]
 
         df = df[df["Importo"] != 0]
 
