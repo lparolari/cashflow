@@ -1,0 +1,1 @@
+rclone sync data files:/files/cashflow --progress
