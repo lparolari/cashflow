@@ -4,7 +4,7 @@ orange='\033[0;33m'
 blue='\033[0;34m'
 darkgrey='\033[1;30m'
 
-available_statement_processors="intesa vivid revolut"
+available_statement_processors="intesa vivid revolut ing"
 csv2notion_supported_backends="csv2notion csv2notion_neo"
 csv2notion_default_backend="csv2notion"
 
@@ -317,6 +317,7 @@ function main() {
             --merge \
             --add-missing-relations \
             --max-threads 1 \
+            --verbose \
             "${transaction_file}")
 
         if [ $? -ne 0 ]; then
